@@ -116,60 +116,60 @@ exports.getData = (cookies, callback) => {
 
                             pagesList.forEach((page) => {
                                 f.push((callback) => {
-									function loadAndParse () {
-										needle.request('get', page, '', {
-											cookies: cookies,
-										}, (err, response) => {
-											// Из-за бага в модуле needle в случае ошибки приходится
-											// заставлять его грузить страницу повторно
-											if (err) return loadAndParse();
+                                    function loadAndParse () {
+                                        needle.request('get', page, '', {
+                                            cookies: cookies,
+                                        }, (err, response) => {
+                                            // Из-за бага в модуле needle в случае ошибки приходится
+                                            // заставлять его грузить страницу повторно
+                                            if (err) return loadAndParse();
 
-											let data = [];
+                                            let data = [];
 
-											if (response.statusCode === 200) {
-												let DOM = new JSDOM(response.body);
-												let tr = DOM.window.document.querySelectorAll('#admin-orders-grid-tbody tr');
+                                            if (response.statusCode === 200) {
+                                                let DOM = new JSDOM(response.body);
+                                                let tr = DOM.window.document.querySelectorAll('#admin-orders-grid-tbody tr');
 
-												// Перебираем строки
-												tr.forEach((row) => {
-													let trData = {};
+                                                // Перебираем строки
+                                                tr.forEach((row) => {
+                                                    let trData = {};
 
-													// Перебираем столбцы
-													config.cols[project].forEach((col) => {
-														let td = row.querySelectorAll('td')[col.position];
+                                                    // Перебираем столбцы
+                                                    config.cols[project].forEach((col) => {
+                                                        let td = row.querySelectorAll('td')[col.position];
 
-														if (td && col.childSelector)
-															td = td.querySelector(col.childSelector);
+                                                        if (td && col.childSelector)
+                                                            td = td.querySelector(col.childSelector);
 
-														trData[col.name] = (td) ? td.textContent : '';
-													});
+                                                        trData[col.name] = (td) ? td.textContent : '';
+                                                    });
 
-													// Фильтрация и добавление результатов
-													{
-														if (config.filters[project]) {
-															let td = row.querySelectorAll('td')[config.filters[project].colPosition];
+                                                    // Фильтрация и добавление результатов
+                                                    {
+                                                        if (config.filters[project]) {
+                                                            let td = row.querySelectorAll('td')[config.filters[project].colPosition];
 
-															if (td.textContent.search(config.filters[project].filter) !== -1)
-																data.push(trData);
-														// Если настроек фильтрации нет
-														} else {
-															data.push(trData);
-														}
-													}
-												});
+                                                            if (td.textContent.search(config.filters[project].filter) !== -1)
+                                                                data.push(trData);
+                                                        // Если настроек фильтрации нет
+                                                        } else {
+                                                            data.push(trData);
+                                                        }
+                                                    }
+                                                });
 
-												++progress[project];
+                                                ++progress[project];
 
-												console.log(`${project}: Обработано ${progress[project]} страниц из ${pagesList.length}.`);
-											} else {
-												console.error(`${project}: Не удалось загрузить страницу '${page}'.`);
-											}
+                                                console.log(`${project}: Обработано ${progress[project]} страниц из ${pagesList.length}.`);
+                                            } else {
+                                                console.error(`${project}: Не удалось загрузить страницу '${page}'.`);
+                                            }
 
-											callback(null, data);
-										});
-									}
-									
-									loadAndParse();
+                                            callback(null, data);
+                                        });
+                                    }
+
+                                    loadAndParse();
                                 });
                             });
 
