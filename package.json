@@ -1,0 +1,16 @@
+{
+  "name": "leadvertex_parser",
+  "version": "1.0.0",
+  "description": "",
+  "main": "run.js",
+  "scripts": {},
+  "author": "Dmitry Mezentsev",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^2.6.0",
+    "dateformat": "^3.0.3",
+    "jsdom": "^11.8.0",
+    "needle": "^2.2.0",
+    "xlsx": "^0.12.10"
+  }
+}
