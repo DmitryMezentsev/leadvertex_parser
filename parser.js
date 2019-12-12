@@ -13,12 +13,10 @@ const { URL }   = url;
 
 
 // Авторизация
-exports.auth = (callback) => {
+exports.auth = callback => {
     // Сначала грузим страницу с формой входа, чтобы получить OPERATORSESSID и YII_CSRF_TOKEN в cookies
-    needle.request('get', config.pages.login, {}, (err, response) => {
+    needle.request('get', config.pages.login, {}, (err, { cookies }) => {
         if (err) return callback(err);
-
-        let cookies = response.cookies;
 
         // Затем отправляем запрос на авторизацию
         needle.request('post', config.pages.login, {
@@ -29,7 +27,7 @@ exports.auth = (callback) => {
             },
             YII_CSRF_TOKEN: cookies.YII_CSRF_TOKEN,
         }, {
-            cookies: cookies,
+            cookies,
         }, (err, response) => {
             if (err) return callback(err);
 
@@ -43,37 +41,37 @@ exports.auth = (callback) => {
 exports.getData = (cookies, callback) => {
     async.waterfall([
         // Получаем списки всех страниц, с которых надо спарсить данные
-        (callback) => {
+        callback => {
             async.parallel((() => {
                 let f = {};
 
                 for (let project of config.projects) {
-                    f[project] = (callback) => {
-                        let tablePageURL = config.pages.tablePage.replace('{project}', project);
+                    f[project] = callback => {
+                        const tablePageURL = config.pages.tablePage.replace('{project}', project);
 
                         needle.request('get', tablePageURL, '', {
-                            cookies: cookies,
+                            cookies,
                         }, (err, response) => {
                             if (err) return callback(err);
 
-                            let pages = [];
+                            const pages = [];
 
                             // Если страница прогружена успешно
                             if (response.statusCode === 200) {
                                 // Имя GET-параметра, определяющего номер страницы в постраничной навигации
                                 const PAGE_URL_PARAM_NAME = 'Order_page';
 
-                                let DOM = new JSDOM(response.body);
+                                const DOM = new JSDOM(response.body);
                                 // Находим ссылку на последнюю страницу в постраничной навигации
-                                let lastPageLink = DOM.window.document.querySelector('.pagination .yiiPager .last a');
+                                const lastPageLink = DOM.window.document.querySelector('.pagination .yiiPager .last a');
 
                                 // Постраничная навигация есть
                                 if (lastPageLink) {
                                     // Выдергиваем URL и номер последней страницы
-                                    let href = lastPageLink.getAttribute('href');
-                                    let maxPage = url.parse(href, true).query[PAGE_URL_PARAM_NAME];
+                                    const href = lastPageLink.getAttribute('href');
+                                    const maxPage = url.parse(href, true).query[PAGE_URL_PARAM_NAME];
 
-                                    let pageURL = new URL(tablePageURL);
+                                    const pageURL = new URL(tablePageURL);
 
                                     // Добавляем ссылки на все страницы в массив
                                     for (let p = 1; p <= maxPage; ++p) {
@@ -109,16 +107,16 @@ exports.getData = (cookies, callback) => {
                 for (let [project, pagesList] of Object.entries(pages)) {
                     progress[project] = 0;
 
-                    f[project] = (callback) => {
+                    f[project] = callback => {
                         // Страницы одного проекта обрабатываются последовательно
                         async.series((() => {
                             let f = [];
 
-                            pagesList.forEach((page) => {
-                                f.push((callback) => {
+                            pagesList.forEach(page => {
+                                f.push(callback => {
                                     function loadAndParse () {
                                         needle.request('get', page, '', {
-                                            cookies: cookies,
+                                            cookies,
                                         }, (err, response) => {
                                             // Из-за бага в модуле needle в случае ошибки приходится
                                             // заставлять его грузить страницу повторно
@@ -127,27 +125,27 @@ exports.getData = (cookies, callback) => {
                                             let data = [];
 
                                             if (response.statusCode === 200) {
-                                                let DOM = new JSDOM(response.body);
-                                                let tr = DOM.window.document.querySelectorAll('#admin-orders-grid-tbody tr');
+                                                const DOM = new JSDOM(response.body);
+                                                const tr = DOM.window.document.querySelectorAll('#admin-orders-grid-tbody tr');
 
                                                 // Перебираем строки
-                                                tr.forEach((row) => {
-                                                    let trData = {};
+                                                tr.forEach(row => {
+                                                    const trData = {};
 
                                                     // Перебираем столбцы
-                                                    config.cols[project].forEach((col) => {
-                                                        let td = row.querySelectorAll('td')[col.position];
+                                                    config.cols[project].forEach(col => {
+                                                        const td = row.querySelectorAll('td')[col.position];
 
                                                         if (td && col.childSelector)
                                                             td = td.querySelector(col.childSelector);
 
-                                                        trData[col.name] = (td) ? td.textContent : '';
+                                                        trData[col.name] = td ? td.textContent : '';
                                                     });
 
                                                     // Фильтрация и добавление результатов
                                                     {
                                                         if (config.filters[project]) {
-                                                            let td = row.querySelectorAll('td')[config.filters[project].colPosition];
+                                                            const td = row.querySelectorAll('td')[config.filters[project].colPosition];
 
                                                             if (td.textContent.search(config.filters[project].filter) !== -1)
                                                                 data.push(trData);
@@ -186,19 +184,19 @@ exports.getData = (cookies, callback) => {
 
 // Экспорт в .xlsx
 exports.export = (data, callback) => {
-    let currentDateTime = dateFormat((new Date()), 'yyyy-mm-dd_HH-MM-ss');
-    let exportPath = config.exportPath.replace('{date}', currentDateTime);
+    const currentDateTime = dateFormat((new Date()), 'yyyy-mm-dd_HH-MM-ss');
+    const exportPath = config.exportPath.replace('{date}', currentDateTime);
 
-    let wb = XLSX.utils.book_new();
+    const wb = XLSX.utils.book_new();
 
-    config.projects.forEach((project) => {
-        let xlsxData = [];
+    config.projects.forEach(project => {
+        const xlsxData = [];
 
         data[project].forEach((i) => {
             i.forEach((j) => xlsxData.push(j));
         });
 
-        let ws = XLSX.utils.json_to_sheet(xlsxData);
+        const ws = XLSX.utils.json_to_sheet(xlsxData);
         XLSX.utils.book_append_sheet(wb, ws, project);
     });
 
