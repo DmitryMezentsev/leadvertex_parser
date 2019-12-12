@@ -192,8 +192,8 @@ exports.export = (data, callback) => {
     config.projects.forEach(project => {
         const xlsxData = [];
 
-        data[project].forEach((i) => {
-            i.forEach((j) => xlsxData.push(j));
+        data[project].forEach(i => {
+            i.forEach(j => xlsxData.push(j));
         });
 
         const ws = XLSX.utils.json_to_sheet(xlsxData);
